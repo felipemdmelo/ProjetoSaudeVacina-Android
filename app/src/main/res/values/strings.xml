@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">ProjetoSaudeVacina-Android</string>
+    <string name="app_name">Projeto Vacina</string>
     <string name="title_activity_maps">Postos de Saúde mais próximos</string>
 </resources>
