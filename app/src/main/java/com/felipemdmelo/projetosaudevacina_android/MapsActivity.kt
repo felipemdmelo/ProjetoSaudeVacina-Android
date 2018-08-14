@@ -1,29 +1,28 @@
 package com.felipemdmelo.projetosaudevacina_android
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.location.Location
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
+import android.support.v7.app.AppCompatActivity
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
-import android.content.pm.PackageManager
-import android.support.v4.app.ActivityCompat
-import android.support.v4.content.ContextCompat
-
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
 
+    private lateinit var locationCallback: LocationCallback
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
 
     private var LOCATION_PERMISSION_CODE = 100
 
@@ -35,8 +34,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        // Create instance of..
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        // Init..
+        init()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startLocationUpdates()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopLocationUpdates()
     }
 
     /**
@@ -50,9 +59,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
      */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-
-        // Get user location..
-        getUserLocation()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -62,9 +68,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-                    getUserLocation()
+                    // permission was granted, yay! Do what you need to do.
+                    //getUserLocation()
+                    startLocationUpdates()
 
                 } else {
 
@@ -73,8 +79,51 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 return
             }
-        }// other 'case' lines to check for other
-        // permissions this app might request
+        }
+    }
+
+    /**
+     * PRIVATE METHODS
+     */
+
+    private fun init() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                locationResult ?: return
+                for (location in locationResult.locations){
+                    var latlng = LatLng(location!!.latitude, location!!.longitude)
+                    setLocation(latlng, "Estou")
+                }
+            }
+        }
+
+        locationRequest = LocationRequest().apply {
+            interval = 30000
+            fastestInterval = 10000
+            smallestDisplacement = 30F
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+    }
+
+    private fun startLocationUpdates() {
+        val permissionCheck =
+                ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                        ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if(permissionCheck) {
+            fusedLocationClient.requestLocationUpdates(locationRequest,
+                    locationCallback,
+                    null /* Looper */)
+        } else {
+            askUserLocationPermission()
+        }
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
     private fun askUserLocationPermission() {
@@ -104,8 +153,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun setLocation(location: LatLng, title: String) {
+        mMap.addMarker(MarkerOptions().position(location).title(title))
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(location))
+    }
+
     // Try to get user location..
-    private fun getUserLocation() {
+    /*private fun getUserLocation() {
         val permissionCheck =
                 ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
@@ -123,10 +177,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             // Ask user permission..
             askUserLocationPermission()
         }
-    }
+    }*/
 
-    private fun setLocation(location: LatLng, title: String) {
-        mMap.addMarker(MarkerOptions().position(location).title(title))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(location))
-    }
 }
