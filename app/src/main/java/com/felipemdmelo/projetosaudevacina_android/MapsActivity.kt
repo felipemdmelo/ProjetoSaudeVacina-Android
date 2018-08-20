@@ -2,11 +2,13 @@ package com.felipemdmelo.projetosaudevacina_android
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
+import android.widget.Toast
+import com.felipemdmelo.projetosaudevacina_android.models.PostoSaude
+import com.felipemdmelo.projetosaudevacina_android.webservice.RetrofitInit
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -14,6 +16,9 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -26,6 +31,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var LOCATION_PERMISSION_CODE = 100
 
+    /**
+     * LIFE CYCLE METHODS
+     * AND OVERRIDE BUILT IN METHODS
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
@@ -85,7 +94,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     /**
      * PRIVATE METHODS
      */
-
     private fun init() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -94,17 +102,41 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 locationResult ?: return
                 for (location in locationResult.locations){
                     var latlng = LatLng(location!!.latitude, location!!.longitude)
-                    setLocation(latlng, "Estou")
+                    moveCameraToMe(latlng)
                 }
             }
         }
 
         locationRequest = LocationRequest().apply {
-            interval = 30000
-            fastestInterval = 10000
-            smallestDisplacement = 30F
+            interval = 60000
+            fastestInterval = 50000
+            smallestDisplacement = 50F
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
+
+        // Recupera lista de postos de saude..
+        val call = RetrofitInit().getPostoSaudeService().listPostoSaude()
+        call.enqueue(object : Callback<List<PostoSaude>> {
+
+            override fun onResponse(call: Call<List<PostoSaude>>, response: Response<List<PostoSaude>>) {
+                val postosSaude = response.body()
+                if (postosSaude != null) {
+                    Toast.makeText(applicationContext, R.string.msg_request_success, Toast.LENGTH_SHORT).show()
+
+                    postosSaude.forEach {
+                        var latlng = LatLng(it.latitude.toDouble(), it.longitude.toDouble())
+                        addMarker(latlng, it.nome, "Hepatite B. 45 doses")
+                    }
+                } else {
+                    Toast.makeText(applicationContext, R.string.msg_request_no_data, Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<List<PostoSaude>>, t: Throwable) {
+                Toast.makeText(applicationContext, R.string.msg_request_failed, Toast.LENGTH_SHORT).show()
+            }
+
+        })
     }
 
     private fun startLocationUpdates() {
@@ -153,30 +185,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun setLocation(location: LatLng, title: String) {
-        mMap.addMarker(MarkerOptions().position(location).title(title))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(location))
+    private fun addMarker(latLng: LatLng, title: String, snippet: String) {
+        mMap.addMarker(MarkerOptions()
+                            .position(latLng)
+                            .title(title)
+                            .snippet(snippet))
     }
 
-    // Try to get user location..
-    /*private fun getUserLocation() {
-        val permissionCheck =
-                ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-        if(permissionCheck) {
-            fusedLocationClient.lastLocation
-                    .addOnSuccessListener { location : Location? ->
-                        // Got last known location. In some rare situations this can be null.
-                        val userLocation = LatLng(location!!.latitude, location!!.longitude)
-                        setLocation(userLocation, "Estou Aqui!")
-                    }
-        } else {
-            // Ask user permission..
-            askUserLocationPermission()
-        }
-    }*/
+    private fun moveCameraToMe(latLng: LatLng) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+    }
 
 }

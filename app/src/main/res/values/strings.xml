@@ -1,4 +1,11 @@
 <resources>
     <string name="app_name">Projeto Vacina</string>
+
+    <!-- Activity titles -->
     <string name="title_activity_maps">Postos de Saúde mais próximos</string>
+
+    <!-- Message texts -->
+    <string name="msg_request_success">Os dados foram carregados com sucesso!</string>
+    <string name="msg_request_no_data">O servidor não retornou dados!</string>
+    <string name="msg_request_failed">Não foi possível retornar dados do servidor. Tente novamente mais tarde!</string>
 </resources>
