@@ -2,7 +2,10 @@
     <string name="app_name">Projeto Vacina</string>
 
     <!-- Activity titles -->
+    <!-- MapsActivity -->
     <string name="title_activity_maps">Postos de Saúde mais próximos</string>
+    <!-- LoginCidadaoActivity -->
+    <string name="title_activity_login_cidadao">Login - Cidadão</string>
 
     <!-- Message texts -->
     <string name="msg_request_success">Os dados foram carregados com sucesso!</string>
